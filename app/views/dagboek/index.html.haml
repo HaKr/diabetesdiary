@@ -1,0 +1,58 @@
+.navigate{:class=>'ui-grid-b'}
+	%div{:class=>'ui-block-a'}	
+		%a{:href=>dagboek_path(:datum=>@dag-1)}  
+			='<-'
+	
+	%div{:class=>'ui-block-b'}
+		=@dag
+			
+	%div{:class=>'ui-block-c'}	
+		%a{:href=>dagboek_path(:datum=>@dag+1)}  
+			="->"
+		
+.dagboek
+	#accordion
+		- expanded = 0
+		- @queue.each do |schema_item|
+			- expanded += 1 if schema_item.wacht? 
+			
+			%div{'data-role'=>'collapsible', 'data-collapsed'=>"#{(expanded == 1 and schema_item.wacht?) ? 'false' : 'true'}"}
+				%h3
+					- advies = !schema_item.glykemieschema_stap.nil? ? schema_item.glykemieschema_stap.advies : '' 
+					%a{ :href => '#'}= "[#{schema_item.status}] #{schema_item.tijdstip} #{schema_item.activiteit.omschrijving} #{advies}" 
+				%div
+					%form{  :action=>"/dagboek/update/#{schema_item.id}", :method=>:post }
+						=text_field_tag "time#{schema_item.id}", schema_item.tijdstip, :type=>'time', :name=>:tijdstip
+						
+						- if schema_item.activiteit.meet_bg > 0
+							=slider schema_item.glykemie, 'Bloedsuiker', "bgslider#{schema_item.id}", :min=>1, :max=>40, :step=>0.1, :name=>'glykemie' 
+						
+						- if schema_item.activiteit.neem_kh > 0
+							=slider schema_item.aantal_kh, 'Hoeveelheid koolhydraten (g)', "khslider#{schema_item.id}", :min=>1, :max=>100, :name=>'aantal_kh' 
+							
+						- if schema_item.activiteit.neem_insuline > 0
+							.insuline{:class=>'ui-grid-c'}
+								%div{:style=>'width:75%;float:left'}
+									-@item = schema_item
+									=slider schema_item.eenheden_insuline, 'Eenheden insuline', "ehslider#{schema_item.id}", :min=>0.5, :max=>50, :step=>0.5, :name=>'eenheden_insuline',:style=>'width:87%'
+								%div{:style=>'width:25%;float:left'}
+									=#select_tag "insuline", options_from_collection_for_select(Insuline.all, "id", "marktnaam")
+									=select("item", "insuline_id", Insuline.all.collect {|i| [ "#{i.marktnaam} (#{i.afkorting})", i.id ] } )
+							
+						- if schema_item.activiteit.meet_ketonen > 0
+							=slider schema_item.hoeveelheid_ketonen, 'Ketonen', "bgslider#{schema_item.id}", :min=>1, :max=>20, :step=>1, :name=>'hoeveelheid_ketonen' 
+						
+						=text_area_tag('notities', schema_item.notities, :rows=>2, :cols=>50, :id=>"#{schema_item.id}_notities")
+
+						
+						%div{:class=>'ui-grid-c'}
+							%div{:class=>'ui-block-a'}	
+								=submit_tag "Gedaan",  :name=>'status' 
+							%div{:class=>'ui-block-b'}	
+								- if !schema_item.overgeslagen? 
+									=submit_tag "Overslaan", :name=>'status' 	 
+							%div{:class=>'ui-block-c'}	
+								- if !schema_item.wacht? 
+									=submit_tag "Herstel",  :name=>'status' 
+						
+					
